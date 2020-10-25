@@ -10,3 +10,6 @@ Build:
 vasm6502_oldstyle  -Fbin -dotdir buttons.s
 minipro -p AT28C256  -w a.out
 ```
+
+![booted](img/6502-buttons-boot.png)
+![pressed](img/6502-buttons-push.png)
