@@ -1,8 +1,9 @@
 # 6502 Buttons Experiment
 
 Built on Ben Eater's 6502 computer, this is a simple experiment to detect and
-react to push buttons connected to the W65C22. To keep this simple, I'm
-connecting buttons directly to CA1, CA2, CB1, and CB2 lines.
+react to push buttons connected to the W65C22. In this first iteration,
+I'm just connecting four buttons (pulled low with 1k resistors) to the four
+lowest bits of PORTA on the W65C22.
 
 Build:
 ```
