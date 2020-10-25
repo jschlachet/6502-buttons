@@ -153,7 +153,7 @@ irq:
 
   ; copy output of PORT A into buttons
   lda PORTA         ; read Port A, this should also clear interrupt
-  and #%00011111
+  and buttonmask
   sta buttons
 
   ; loop N times, reading each line and motifying the status string
@@ -204,6 +204,7 @@ bit_done:
 
 
 buttoncount: .byte $5
+buttonmask:  .byte #%00011111
 
   .org $fffa
   .word nmi
