@@ -2,6 +2,12 @@
 ; Working on my first 6502 programs for learning.
 ; Jason Schlachet <jss@offramp.org>
 ;
+; Interrupt driven button status. Buttons are connected to Port A, but also
+; OR'd together to the CA1 line to generate a positive active edge. When
+; an interrupt is received, read Port A and change string to reflect buttons
+; status. For some reason, this only shows the button pushed, it doesn't
+; support multiple buttons pushed at the same time.
+;
 PORTB = $6000
 PORTA = $6001
 DDRB = $6002
@@ -24,11 +30,11 @@ RS = %00100000
 reset:
   ldx #$ff
   txs
-  cli               ; clear interrupt enable
+  cli               ; clear interrupt disable
 
-  lda #$82          ; enable CA1 (not used yet)
+  lda #$82          ; enable CA1
   sta IER
-  lda #%00          ; setup peripheral control registerwq
+  lda #%00000001          ; setup peripheral control register
   sta PCR
 
   lda #%11111111    ; Set all pins on port B to output
@@ -51,42 +57,14 @@ reset:
   sta message+1
   sta message+2
   sta message+3
-  lda #0
   sta message+4
+  lda #0
+  sta message+5
 
 loop:
+
   lda #%00000010    ; go to home
   jsr lcd_instruction
-
-  ; copy output of PORT A into buttons
-  lda PORTA
-  and #%00001111
-  sta buttons
-
-  ; loop four times, reading each line and motifying the status string
-  ; based on the state of the bits
-  ldy #4
-  ldx #0
-bit_loop:
-  lda buttons
-  and #%00000001    ; look at right most bit
-  beq bit_off
-  lda #"!"
-  sta message,x
-  jmp bit_next
-bit_off:
-  lda #"."
-  sta message,x
-bit_next:
-  lsr buttons       ; shift bits right one place
-  lda buttons
-  inx
-  txa               ; copy x to a
-  cmp #4            ; compare a to loop iteration max
-  beq bit_done
-  jmp bit_loop
-bit_done:
-
 
   ldx #0
 print:
@@ -162,8 +140,56 @@ print_char:
 
 
 nmi:
+  rti               ; don't react to NMI
+
 irq:
+  pha               ; push A, X, and Y onto stack
+  txa
+  pha
+  tya
+  pha
+
+  ; copy output of PORT A into buttons
+  lda PORTA         ; read Port A, this should also clear interrupt
+  and buttonmask
+  sta buttons
+
+  ; loop N times (once per button), reading each line and motifying the status
+  ; string based on the state of the bits
+  ldy buttoncount
+  ldx #0
+bit_loop:
+  lda buttons
+  and #%00000001    ; look at right most bit
+  beq bit_off
+  txa               ; copy index to a
+  adc #"1"          ; add "1" char to a, so the string represents button number
+  sta message,x
+  jmp bit_next
+bit_off:
+  lda #"."
+  sta message,x
+bit_next:
+  lsr buttons       ; shift bits right one place
+  lda buttons
+  inx
+  txa               ; copy x to a
+  cmp buttoncount   ; compare a to loop iteration max
+  beq bit_done
+  jmp bit_loop
+bit_done:
+
+  pla               ; restore Y, X, and A from stack
+  tay
+  pla
+  tax
+  pla
+
   rti
+
+
+buttoncount: .byte $5
+buttonmask:  .byte $1f ; 00011111
 
   .org $fffa
   .word nmi
