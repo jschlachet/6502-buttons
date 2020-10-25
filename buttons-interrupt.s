@@ -149,22 +149,21 @@ irq:
   tya
   pha
 
-  ; XXXXXXXXXXXXXXXXXXXXXXXXX
-
   ; copy output of PORT A into buttons
   lda PORTA         ; read Port A, this should also clear interrupt
   and buttonmask
   sta buttons
 
-  ; loop N times, reading each line and motifying the status string
-  ; based on the state of the bits
+  ; loop N times (once per button), reading each line and motifying the status
+  ; string based on the state of the bits
   ldy buttoncount
   ldx #0
 bit_loop:
   lda buttons
   and #%00000001    ; look at right most bit
   beq bit_off
-  lda #"!"
+  txa               ; copy index to a
+  adc #"1"          ; add "1" char to a, so the string represents button number
   sta message,x
   jmp bit_next
 bit_off:
@@ -175,24 +174,10 @@ bit_next:
   lda buttons
   inx
   txa               ; copy x to a
-  cmp buttoncount            ; compare a to loop iteration max
+  cmp buttoncount   ; compare a to loop iteration max
   beq bit_done
   jmp bit_loop
 bit_done:
-
-
-  ; XXXXXXXXXXXXXXXXXXXXXXXXX
-
-  ; delay to effectively debounce
-  ; ldx #$ff
-  ; ldy #$99
-  ; delay:
-  ; dex
-  ; bne delay ; loop
-  ; dey
-  ; bne delay
-
-  ;bit PORTA ; read port a (bit test w/o storing it) to clear interrupt
 
   pla               ; restore Y, X, and A from stack
   tay
@@ -204,7 +189,7 @@ bit_done:
 
 
 buttoncount: .byte $5
-buttonmask:  .byte #%00011111
+buttonmask:  .byte $1f ; 00011111
 
   .org $fffa
   .word nmi
